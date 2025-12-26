@@ -129,32 +129,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* Progress Section */}
-        {progress.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/20 shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-              <span className="text-purple-400">📊</span> Data Source Progress
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {progress.map((item) => (
-                <div
-                  key={item.source}
-                  className={`p-4 rounded-xl border ${item.status === 'success'
-                      ? 'bg-green-500/10 border-green-500/30'
-                      : 'bg-red-500/10 border-red-500/30'
-                    }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{item.source}</span>
-                    <span className={`text-sm ${item.status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-                      {item.count > 0 ? `${item.count} found` : 'No results'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Results Section */}
         {scanResult && (
@@ -211,29 +185,6 @@ export default function Home() {
               </div>
             )}
 
-            {scanResult.subdomains.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10">
-                <div className="flex justify-between items-center text-sm text-gray-400">
-                  <div>
-                    Total: <span className="text-white font-semibold">{scanResult.total}</span> subdomains
-                  </div>
-                  {subdomainStatuses.size > 0 && (
-                    <div className="flex gap-4">
-                      <div>
-                        Working: <span className="text-green-400 font-semibold">
-                          {Array.from(subdomainStatuses.values()).filter(s => s.working).length}
-                        </span>
-                      </div>
-                      <div>
-                        Not Working: <span className="text-red-400 font-semibold">
-                          {Array.from(subdomainStatuses.values()).filter(s => !s.working).length}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
