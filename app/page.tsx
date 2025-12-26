@@ -34,6 +34,11 @@ export default function Home() {
       // Normalize domain to extract clean domain from URLs
       const normalizedDomain = normalizeDomain(domain.trim());
 
+      // Update input field if normalized domain is different
+      if (normalizedDomain !== domain.trim()) {
+        setDomain(normalizedDomain);
+      }
+
       const response = await fetch('/api/subdomains/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,18 +72,27 @@ export default function Home() {
     const newStatuses = new Map<string, SubdomainResult>();
 
     try {
-      const response = await fetch('/api/subdomains/status', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subdomains: scanResult.subdomains }),
-      });
+      const subdomains = scanResult.subdomains;
+      const batchSize = 5; // Process 5 subdomains at a time for real-time updates
 
-      if (response.ok) {
-        const data = await response.json();
-        data.results.forEach((result: SubdomainResult) => {
-          newStatuses.set(result.subdomain, result);
+      // Process subdomains in batches
+      for (let i = 0; i < subdomains.length; i += batchSize) {
+        const batch = subdomains.slice(i, i + batchSize);
+
+        const response = await fetch('/api/subdomains/status', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subdomains: batch }),
         });
-        setSubdomainStatuses(newStatuses);
+
+        if (response.ok) {
+          const data = await response.json();
+          data.results.forEach((result: SubdomainResult) => {
+            newStatuses.set(result.subdomain, result);
+          });
+          // Update UI after each batch completes
+          setSubdomainStatuses(new Map(newStatuses));
+        }
       }
     } catch (err) {
       console.error('Status check failed:', err);
@@ -285,7 +299,7 @@ export default function Home() {
                       {checkingStatus ? (
                         <span className="flex items-center gap-2">
                           <span className="cyber-spinner" />
-                          Probing
+                          Probing {checkedCount}/{scanResult.total}
                         </span>
                       ) : (
                         'Verify Status'
