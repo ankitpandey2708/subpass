@@ -1,0 +1,12 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow API routes from indexing
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://subpass.vercel.app/sitemap.xml
+
+# Crawl delay (optional - can be adjusted)
+Crawl-delay: 1

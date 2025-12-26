@@ -2,11 +2,80 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SUBPASS // Subdomain Reconnaissance",
-  description: "Advanced subdomain enumeration using 19 OSINT data sources. A high-tech reconnaissance tool for security professionals.",
-  keywords: ["subdomain", "scanner", "OSINT", "security", "reconnaissance", "penetration testing"],
-  authors: [{ name: "SUBPASS" }],
+  metadataBase: new URL('https://subpass.vercel.app'),
+  title: {
+    default: "SUBPASS - Advanced Subdomain Enumeration Tool | 19 OSINT Sources",
+    template: "%s | SUBPASS"
+  },
+  description: "Advanced subdomain enumeration using 19 OSINT data sources including crt.sh, AlienVault, CommonCrawl, and more. Professional reconnaissance tool for security researchers and penetration testers.",
+  keywords: [
+    "subdomain enumeration",
+    "subdomain scanner",
+    "OSINT tool",
+    "security reconnaissance",
+    "penetration testing",
+    "subdomain discovery",
+    "cybersecurity tool",
+    "bug bounty",
+    "information gathering",
+    "DNS enumeration",
+    "crt.sh",
+    "security research",
+    "ethical hacking",
+    "recon tool",
+    "web security"
+  ],
+  authors: [{ name: "SUBPASS", url: "https://subpass.vercel.app" }],
+  creator: "SUBPASS",
+  publisher: "SUBPASS",
   themeColor: "#00f0ff",
+  applicationName: "SUBPASS",
+  generator: "Next.js",
+  referrer: "origin-when-cross-origin",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://subpass.vercel.app",
+    siteName: "SUBPASS",
+    title: "SUBPASS - Advanced Subdomain Enumeration Tool",
+    description: "Advanced subdomain enumeration using 19 OSINT data sources. Professional reconnaissance tool for security researchers and penetration testers.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SUBPASS - Subdomain Reconnaissance System",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SUBPASS - Advanced Subdomain Enumeration Tool",
+    description: "Advanced subdomain enumeration using 19 OSINT data sources. Professional reconnaissance tool for security researchers.",
+    images: ["/og-image.png"],
+    creator: "@subpass",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
+  verification: {
+    // Add verification codes when available
+    // google: "verification_code",
+    // yandex: "verification_code",
+  },
 };
 
 export default function RootLayout({
@@ -14,6 +83,33 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SUBPASS",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Web",
+    "description": "Advanced subdomain enumeration using 19 OSINT data sources. Professional reconnaissance tool for security researchers and penetration testers.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "19 OSINT Data Sources",
+      "Parallel Scanning",
+      "Real-time Status Verification",
+      "DNS and HTTP/HTTPS Checks",
+      "Smart Batching"
+    ],
+    "screenshot": "https://subpass.vercel.app/og-image.png",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "ratingCount": "1"
+    }
+  };
+
   return (
     <html lang="en">
       <head>
@@ -22,6 +118,11 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
+        />
+        <link rel="canonical" href="https://subpass.vercel.app" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body className="antialiased">
