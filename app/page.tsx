@@ -401,12 +401,17 @@ export default function Home() {
                               </span>
 
                               {/* Subdomain Name */}
-                              <span
-                                className="subdomain-text font-mono text-sm text-[#8888a0] truncate"
+                              <a
+                                href={status?.working && status.protocol
+                                  ? `${status.protocol}//${subdomain}`
+                                  : `https://${subdomain}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
                                 title={subdomain}
                               >
                                 {subdomain}
-                              </span>
+                              </a>
                             </div>
 
                             {/* Protocol Badge */}
