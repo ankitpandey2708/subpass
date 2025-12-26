@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SUBPASS // Subdomain Reconnaissance",
-  description: "Advanced subdomain enumeration using 11 OSINT data sources. A high-tech reconnaissance tool for security professionals.",
+  description: "Advanced subdomain enumeration using 19 OSINT data sources. A high-tech reconnaissance tool for security professionals.",
   keywords: ["subdomain", "scanner", "OSINT", "security", "reconnaissance", "penetration testing"],
   authors: [{ name: "SUBPASS" }],
   themeColor: "#00f0ff",

@@ -1,6 +1,14 @@
 # Subpass
 
-Subdomain scanner built with Next.js
+Advanced subdomain enumeration tool built with Next.js, utilizing 19 OSINT data sources for comprehensive reconnaissance.
+
+## Features
+
+- **19 OSINT Data Sources**: Aggregates results from crt.sh, RapidDNS, AlienVault OTX, HackerTarget, Anubis, CommonCrawl, ThreatCrowd, WaybackArchive, Sublist3r, CertSpotter, BeVigil, Riddler.io, LeakIX, DNSRepo, FullHunt, Hunter.io, Censys, BinaryEdge, and ZoomEye
+- **Parallel Scanning**: All sources queried simultaneously for maximum speed
+- **Real-time Status Verification**: DNS + HTTP/HTTPS checks for discovered subdomains
+- **Cyberpunk UI**: Modern, responsive terminal-style interface
+- **Smart Batching**: Adaptive batch processing for large result sets
 
 ## Setup
 
@@ -11,7 +19,10 @@ npm run dev
 
 ## Usage
 
-Enter a domain to scan for subdomains using OSINT sources
+Enter a domain to scan for subdomains using 19 OSINT sources. The tool will:
+1. Query all data sources in parallel
+2. Aggregate and deduplicate results
+3. Optionally verify subdomain status (DNS + HTTP checks)
 
 ## Commands
 
