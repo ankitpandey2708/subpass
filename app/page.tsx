@@ -168,7 +168,7 @@ export default function Home() {
                       value={domain}
                       onChange={(e) => setDomain(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="enter.target.domain"
+                      placeholder="example.com"
                       className="terminal-input w-full pl-12 pr-4 py-4 text-[#e8e8f0] font-mono text-base md:text-lg placeholder:text-[#555566]"
                       disabled={scanning}
                       autoComplete="off"
@@ -349,9 +349,6 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <span>
                       Scan completed at {new Date().toLocaleTimeString('en-US', { hour12: false })}
-                    </span>
-                    <span className="text-[#00f0ff]">
-                      {progress.filter(p => p.status === 'success').length}/{progress.length} sources
                     </span>
                   </div>
                 </div>
