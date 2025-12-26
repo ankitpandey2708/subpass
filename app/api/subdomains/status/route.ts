@@ -62,25 +62,31 @@ async function checkSubdomainStatus(subdomain: string): Promise<SubdomainResult>
         };
     }
 
-    // Try HTTPS first, then HTTP
+    // Try HTTPS and HTTP in parallel for faster results
     const protocols = ['https://', 'http://'];
 
-    for (const protocol of protocols) {
-        try {
+    const results = await Promise.allSettled(
+        protocols.map(async (protocol) => {
             const url = `${protocol}${subdomain}`;
             const response = await fetchWithoutSSLVerification(url, 10000);
 
             // Consider 2xx and 3xx status codes as "working"
             if (response.status >= 200 && response.status < 400) {
-                return {
-                    subdomain,
-                    working: true,
-                    protocol,
-                };
+                return { protocol, status: response.status };
             }
-        } catch {
-            // If fetch fails, try the next protocol
-            continue;
+            throw new Error('Not successful');
+        })
+    );
+
+    // Return first successful result (prefer HTTPS over HTTP)
+    for (let i = 0; i < results.length; i++) {
+        if (results[i].status === 'fulfilled') {
+            const value = (results[i] as PromiseFulfilledResult<{ protocol: string; status: number }>).value;
+            return {
+                subdomain,
+                working: true,
+                protocol: value.protocol,
+            };
         }
     }
 

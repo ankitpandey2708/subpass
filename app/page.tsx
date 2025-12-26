@@ -88,20 +88,17 @@ export default function Home() {
 
     try {
       const subdomains = scanResult.subdomains;
-      const batchSize = 5; // Process 5 subdomains at a time for real-time updates
 
-      // Process subdomains in batches
-      for (let i = 0; i < subdomains.length; i += batchSize) {
-        const batch = subdomains.slice(i, i + batchSize);
-
-        // Mark current batch as being checked
-        setCheckingSubdomains(new Set(batch));
+      // Smart adaptive batching: process all at once for small lists, batch for large lists
+      if (subdomains.length <= 50) {
+        // Small list: process all at once for fastest completion
+        setCheckingSubdomains(new Set(subdomains));
 
         const response = await fetch('/api/subdomains/status', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subdomains: batch }),
-          signal, // Pass abort signal to fetch
+          body: JSON.stringify({ subdomains }),
+          signal,
         });
 
         if (response.ok) {
@@ -109,12 +106,44 @@ export default function Home() {
           data.results.forEach((result: SubdomainResult) => {
             newStatuses.set(result.subdomain, result);
           });
-          // Update UI after each batch completes
           setSubdomainStatuses(new Map(newStatuses));
         }
 
-        // Clear checking state for this batch
         setCheckingSubdomains(new Set());
+      } else {
+        // Large list: use adaptive batching for progress feedback
+        // Batch size scales with total count but stays within reasonable bounds
+        const batchSize = Math.min(
+          Math.max(30, Math.ceil(subdomains.length / 10)), // Min 30, aim for ~10 batches
+          100 // Max 100 per batch to avoid overwhelming server
+        );
+
+        // Process subdomains in batches
+        for (let i = 0; i < subdomains.length; i += batchSize) {
+          const batch = subdomains.slice(i, i + batchSize);
+
+          // Mark current batch as being checked
+          setCheckingSubdomains(new Set(batch));
+
+          const response = await fetch('/api/subdomains/status', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subdomains: batch }),
+            signal, // Pass abort signal to fetch
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            data.results.forEach((result: SubdomainResult) => {
+              newStatuses.set(result.subdomain, result);
+            });
+            // Update UI after each batch completes
+            setSubdomainStatuses(new Map(newStatuses));
+          }
+
+          // Clear checking state for this batch
+          setCheckingSubdomains(new Set());
+        }
       }
     } catch (err) {
       // Don't log error if request was aborted
