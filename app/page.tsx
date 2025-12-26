@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ScanResult, ScanProgress, SubdomainResult, normalizeDomain } from '@/app/lib/subdomain-scanner';
 import { SOURCES_COUNT } from '@/app/api/subdomains/scan/route';
 
@@ -14,6 +14,7 @@ export default function Home() {
   const [subdomainStatuses, setSubdomainStatuses] = useState<Map<string, SubdomainResult>>(new Map());
   const [checkingSubdomains, setCheckingSubdomains] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
+  const statusAbortController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -25,11 +26,19 @@ export default function Home() {
       return;
     }
 
+    // Abort any ongoing status checks
+    if (statusAbortController.current) {
+      statusAbortController.current.abort();
+      statusAbortController.current = null;
+    }
+
     setScanning(true);
     setError('');
     setScanResult(null);
     setProgress([]);
     setSubdomainStatuses(new Map());
+    setCheckingStatus(false);
+    setCheckingSubdomains(new Set());
 
     try {
       // Normalize domain to extract clean domain from URLs
@@ -69,6 +78,10 @@ export default function Home() {
   const checkAllStatuses = async () => {
     if (!scanResult || scanResult.subdomains.length === 0) return;
 
+    // Create new AbortController for this status check
+    statusAbortController.current = new AbortController();
+    const signal = statusAbortController.current.signal;
+
     setCheckingStatus(true);
     setCheckingSubdomains(new Set()); // Clear checking set at start
     const newStatuses = new Map<string, SubdomainResult>();
@@ -88,6 +101,7 @@ export default function Home() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subdomains: batch }),
+          signal, // Pass abort signal to fetch
         });
 
         if (response.ok) {
@@ -103,10 +117,14 @@ export default function Home() {
         setCheckingSubdomains(new Set());
       }
     } catch (err) {
-      console.error('Status check failed:', err);
+      // Don't log error if request was aborted
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Status check failed:', err);
+      }
     } finally {
       setCheckingStatus(false);
       setCheckingSubdomains(new Set());
+      statusAbortController.current = null;
     }
   };
 
