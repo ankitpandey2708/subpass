@@ -26,6 +26,9 @@ export const HEADERS = {
     'Accept-Language': 'en-US,en;q=0.9',
 };
 
+// Domain validation regex constant
+export const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+
 // Normalize domain input to extract clean domain
 // Handles: https://www.npci.org.in/, www.npci.org.in/, npci.org.in/abc
 export function normalizeDomain(input: string): string {
@@ -48,8 +51,7 @@ export function normalizeDomain(input: string): string {
 
 // Validate domain format
 export function isValidDomain(domain: string): boolean {
-    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
-    return domainRegex.test(domain);
+    return DOMAIN_REGEX.test(domain.toLowerCase());
 }
 
 // Clean and validate subdomain
@@ -62,7 +64,7 @@ export function cleanSubdomain(subdomain: string, baseDomain: string): string | 
     }
 
     // Validate format
-    if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/.test(cleaned)) {
+    if (!DOMAIN_REGEX.test(cleaned)) {
         return null;
     }
 
@@ -72,18 +74,64 @@ export function cleanSubdomain(subdomain: string, baseDomain: string): string | 
 // Deduplicate and filter subdomains
 export function processSubdomains(subdomains: Set<string>, baseDomain: string): string[] {
     const cleaned = new Set<string>();
-    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
 
     for (const sub of subdomains) {
         const s = sub.trim().toLowerCase();
         // Must end with base domain, not be the base domain itself, and not start with wildcard
         if (s.endsWith(baseDomain) && s !== baseDomain && !s.startsWith('*')) {
             // Regex validation matching Python script
-            if (domainRegex.test(s)) {
+            if (DOMAIN_REGEX.test(s)) {
                 cleaned.add(s);
             }
         }
     }
 
     return Array.from(cleaned).sort();
+}
+
+// Extract host from URL string (handles URLs with/without protocol)
+export function extractHostFromUrl(url: string): string {
+    let host = url;
+    if (host.includes('://')) {
+        host = host.split('://')[1];
+    }
+    return host.split('/')[0].split(':')[0].toLowerCase();
+}
+
+// Filter and validate subdomains for a given base domain
+export function filterValidSubdomains(subdomains: string[], baseDomain: string): Set<string> {
+    return new Set(
+        subdomains
+            .map(s => s.toLowerCase().trim())
+            .filter(s => s.endsWith(baseDomain) && !s.startsWith('*') && DOMAIN_REGEX.test(s))
+    );
+}
+
+// Generic fetch wrapper for all OSINT sources
+export async function fetchSource(
+    url: string,
+    timeout: number,
+    parser: (response: Response) => Promise<Set<string>>
+): Promise<Set<string>> {
+    try {
+        const response = await fetch(url, {
+            headers: HEADERS,
+            signal: AbortSignal.timeout(timeout),
+            cache: 'no-store'
+        });
+        if (!response.ok) return new Set();
+        return await parser(response);
+    } catch {
+        return new Set();
+    }
+}
+
+// Helper function for creating consistent error responses
+export function createErrorResponse(message: string, status = 500) {
+    if (typeof window === 'undefined') {
+        // Server-side only - import NextResponse dynamically
+        const { NextResponse } = require('next/server');
+        return NextResponse.json({ error: message }, { status });
+    }
+    throw new Error('createErrorResponse should only be used server-side');
 }

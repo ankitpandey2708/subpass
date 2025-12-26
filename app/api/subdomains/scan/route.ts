@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HEADERS, processSubdomains, ScanProgress, normalizeDomain } from '@/app/lib/subdomain-scanner';
+import { processSubdomains, ScanProgress, normalizeDomain, fetchSource, extractHostFromUrl, createErrorResponse } from '@/app/lib/subdomain-scanner';
 
 // Define all sources matching subdomain.py
 const sources = {
@@ -22,14 +22,7 @@ export const SOURCES_COUNT = Object.keys(sources).length;
 // Fetch from crt.sh - Certificate Transparency logs
 async function fetchCrtsh(domain: string): Promise<Set<string>> {
     const url = `https://crt.sh/?q=%25.${domain}&output=json`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(60000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 60000, async (response) => {
         const data = await response.json();
         const subdomains = new Set<string>();
 
@@ -45,24 +38,14 @@ async function fetchCrtsh(domain: string): Promise<Set<string>> {
             }
         }
         return subdomains;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from RapidDNS
 async function fetchRapiddns(domain: string): Promise<Set<string>> {
     const url = `https://rapiddns.io/subdomain/${domain}?full=1`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const text = await response.text();
-        // More inclusive regex to capture all subdomains in the table
         const regex = new RegExp(`<td>([a-zA-Z0-9\\.\\-]+\\.${domain.replace(/\./g, '\\.')})</td>`, 'gi');
         const matches = text.matchAll(regex);
         const subdomains = new Set<string>();
@@ -74,22 +57,13 @@ async function fetchRapiddns(domain: string): Promise<Set<string>> {
             }
         }
         return subdomains;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from AlienVault OTX
 async function fetchAlienvault(domain: string): Promise<Set<string>> {
     const url = `https://otx.alienvault.com/api/v1/indicators/domain/${domain}/passive_dns`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         const subdomains = new Set<string>();
 
@@ -100,22 +74,13 @@ async function fetchAlienvault(domain: string): Promise<Set<string>> {
             }
         }
         return subdomains;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from HackerTarget
 async function fetchHackertarget(domain: string): Promise<Set<string>> {
     const url = `https://api.hackertarget.com/hostsearch/?q=${encodeURIComponent(domain)}`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const text = await response.text();
         const subdomains = new Set<string>();
 
@@ -129,75 +94,42 @@ async function fetchHackertarget(domain: string): Promise<Set<string>> {
             }
         }
         return subdomains;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from Anubis
 async function fetchAnubis(domain: string): Promise<Set<string>> {
     const url = `https://jldc.me/anubis/subdomains/${domain}`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         if (Array.isArray(data)) {
             return new Set(data.map(h => h.toLowerCase()).filter(h => h.endsWith(domain) && !h.startsWith('*')));
         }
         return new Set();
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from ThreatCrowd
 async function fetchThreatcrowd(domain: string): Promise<Set<string>> {
     const url = `https://www.threatcrowd.org/searchApi/v2/domain/report/?domain=${encodeURIComponent(domain)}`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         const subs = data.subdomains || [];
         return new Set(subs.map((s: string) => s.toLowerCase()).filter((s: string) => s.endsWith(domain) && !s.startsWith('*')));
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from Wayback Archive
 async function fetchWaybackarchive(domain: string): Promise<Set<string>> {
     const url = `http://web.archive.org/cdx/search/cdx?url=*.${encodeURIComponent(domain)}&output=json&fl=original&collapse=urlkey&limit=10000`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(40000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 40000, async (response) => {
         const data = await response.json();
         const hosts = new Set<string>();
 
         for (const row of data.slice(1)) {
             const original = row[0];
             try {
-                // More robust extraction than new URL() which identifies protocol-less strings
-                let host = original;
-                if (host.includes('://')) {
-                    host = host.split('://')[1];
-                }
-                host = host.split('/')[0].split(':')[0].toLowerCase();
-
+                const host = extractHostFromUrl(original);
                 if (host && host.endsWith(domain) && !host.startsWith('*')) {
                     hosts.add(host);
                 }
@@ -206,9 +138,7 @@ async function fetchWaybackarchive(domain: string): Promise<Set<string>> {
             }
         }
         return hosts;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from CommonCrawl
@@ -217,38 +147,29 @@ async function fetchCommoncrawl(domain: string): Promise<Set<string>> {
     const found = new Set<string>();
 
     for (const idx of indices) {
-        try {
-            const url = `https://index.commoncrawl.org/${idx}?url=*.${encodeURIComponent(domain)}&output=json`;
-            const response = await fetch(url, {
-                headers: HEADERS,
-                signal: AbortSignal.timeout(30000),
-                cache: 'no-store'
-            });
-            if (!response.ok) continue;
-
+        const url = `https://index.commoncrawl.org/${idx}?url=*.${encodeURIComponent(domain)}&output=json`;
+        const result = await fetchSource(url, 30000, async (response) => {
             const text = await response.text();
+            const hosts = new Set<string>();
+
             for (const line of text.split('\n')) {
                 try {
                     const obj = JSON.parse(line.trim());
                     if (obj && obj.url) {
-                        let host = obj.url;
-                        if (host.includes('://')) {
-                            host = host.split('://')[1];
-                        }
-                        host = host.split('/')[0].split(':')[0].toLowerCase();
-
+                        const host = extractHostFromUrl(obj.url);
                         if (host && host.endsWith(domain) && !host.startsWith('*')) {
-                            found.add(host);
+                            hosts.add(host);
                         }
                     }
                 } catch {
                     continue;
                 }
             }
-            if (found.size > 0) break;
-        } catch {
-            continue;
-        }
+            return hosts;
+        });
+
+        result.forEach(host => found.add(host));
+        if (found.size > 0) break;
     }
     return found;
 }
@@ -256,14 +177,7 @@ async function fetchCommoncrawl(domain: string): Promise<Set<string>> {
 // Fetch from CertSpotter
 async function fetchCertspotter(domain: string): Promise<Set<string>> {
     const url = `https://api.certspotter.com/v1/issuances?domain=${domain}&include_subdomains=true&expand=dns_names`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         const subs = new Set<string>();
 
@@ -276,45 +190,25 @@ async function fetchCertspotter(domain: string): Promise<Set<string>> {
             }
         }
         return subs;
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from Sublist3r API
 async function fetchSublist3rApi(domain: string): Promise<Set<string>> {
     const url = `https://api.sublist3r.com/search.php?domain=${domain}`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         return new Set(data.map((s: string) => s.toLowerCase()).filter((s: string) => s.endsWith(domain) && !s.startsWith('*')));
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Fetch from BeVigil
 async function fetchBevigil(domain: string): Promise<Set<string>> {
     const url = `https://bevigil.com/api/${domain}/subdomains/`;
-    try {
-        const response = await fetch(url, {
-            headers: HEADERS,
-            signal: AbortSignal.timeout(30000),
-            cache: 'no-store'
-        });
-        if (!response.ok) return new Set();
-
+    return fetchSource(url, 30000, async (response) => {
         const data = await response.json();
         return new Set((data.subdomains || []).map((s: string) => s.toLowerCase()).filter((s: string) => s.endsWith(domain)));
-    } catch {
-        return new Set();
-    }
+    });
 }
 
 // Main POST handler
@@ -389,6 +283,6 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('Scan error:', error);
-        return NextResponse.json({ error: 'Failed to scan subdomains' }, { status: 500 });
+        return createErrorResponse('Failed to scan subdomains');
     }
 }
