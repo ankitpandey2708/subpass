@@ -173,6 +173,7 @@ export default function Home() {
                       disabled={scanning}
                       autoComplete="off"
                       spellCheck="false"
+                      autofocus
                     />
                   </div>
 
