@@ -351,7 +351,7 @@ export default function Home() {
                       Scan completed at {new Date().toLocaleTimeString('en-US', { hour12: false })}
                     </span>
                     <span className="text-[#00f0ff]">
-                      {progress.filter(p => p.success).length}/{progress.length} sources
+                      {progress.filter(p => p.status === 'success').length}/{progress.length} sources
                     </span>
                   </div>
                 </div>
