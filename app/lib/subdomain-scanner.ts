@@ -27,7 +27,7 @@ export const HEADERS = {
 };
 
 // Domain validation regex constant
-export const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
 
 // Normalize domain input to extract clean domain
 // Handles: https://www.npci.org.in/, www.npci.org.in/, npci.org.in/abc
@@ -47,28 +47,6 @@ export function normalizeDomain(input: string): string {
     domain = domain.split(':')[0];
 
     return domain;
-}
-
-// Validate domain format
-export function isValidDomain(domain: string): boolean {
-    return DOMAIN_REGEX.test(domain.toLowerCase());
-}
-
-// Clean and validate subdomain
-export function cleanSubdomain(subdomain: string, baseDomain: string): string | null {
-    const cleaned = subdomain.trim().toLowerCase();
-
-    // Must end with base domain and not start with wildcard
-    if (!cleaned.endsWith(baseDomain) || cleaned.startsWith('*')) {
-        return null;
-    }
-
-    // Validate format
-    if (!DOMAIN_REGEX.test(cleaned)) {
-        return null;
-    }
-
-    return cleaned;
 }
 
 // Deduplicate and filter subdomains
@@ -96,15 +74,6 @@ export function extractHostFromUrl(url: string): string {
         host = host.split('://')[1];
     }
     return host.split('/')[0].split(':')[0].toLowerCase();
-}
-
-// Filter and validate subdomains for a given base domain
-export function filterValidSubdomains(subdomains: string[], baseDomain: string): Set<string> {
-    return new Set(
-        subdomains
-            .map(s => s.toLowerCase().trim())
-            .filter(s => s.endsWith(baseDomain) && !s.startsWith('*') && DOMAIN_REGEX.test(s))
-    );
 }
 
 // Generic fetch wrapper for all OSINT sources
