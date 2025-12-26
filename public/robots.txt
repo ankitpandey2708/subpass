@@ -6,7 +6,7 @@ Allow: /
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://subpass.com/sitemap.xml
+Sitemap: https://subpass.vercel.app/sitemap.xml
 
 # Crawl delay (optional - can be adjusted)
 Crawl-delay: 1

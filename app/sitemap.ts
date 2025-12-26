@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://subpass.com'
+  const baseUrl = 'https://subpass.vercel.app'
 
   return [
     {

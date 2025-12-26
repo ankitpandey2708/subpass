@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://subpass.com'),
+  metadataBase: new URL('https://subpass.vercel.app'),
   title: {
     default: "SUBPASS - Advanced Subdomain Enumeration Tool | 19 OSINT Sources",
     template: "%s | SUBPASS"
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     "recon tool",
     "web security"
   ],
-  authors: [{ name: "SUBPASS", url: "https://subpass.com" }],
+  authors: [{ name: "SUBPASS", url: "https://subpass.vercel.app" }],
   creator: "SUBPASS",
   publisher: "SUBPASS",
   themeColor: "#00f0ff",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://subpass.com",
+    url: "https://subpass.vercel.app",
     siteName: "SUBPASS",
     title: "SUBPASS - Advanced Subdomain Enumeration Tool",
     description: "Advanced subdomain enumeration using 19 OSINT data sources. Professional reconnaissance tool for security researchers and penetration testers.",
@@ -102,7 +102,7 @@ export default function RootLayout({
       "DNS and HTTP/HTTPS Checks",
       "Smart Batching"
     ],
-    "screenshot": "https://subpass.com/og-image.png",
+    "screenshot": "https://subpass.vercel.app/og-image.png",
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "5",
@@ -119,7 +119,7 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
-        <link rel="canonical" href="https://subpass.com" />
+        <link rel="canonical" href="https://subpass.vercel.app" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
