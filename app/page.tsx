@@ -373,58 +373,230 @@ export default function Home() {
                         Domain returned empty results from all sources
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-1 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                      {scanResult.subdomains.map((subdomain, index) => {
+                  ) : (() => {
+                    // Determine if we should group by status
+                    const shouldGroup = scanResult.subdomains.length >= 10 && checkedCount > 0;
+
+                    if (shouldGroup) {
+                      // Group subdomains by status
+                      const activeSubdomains: string[] = [];
+                      const downSubdomains: string[] = [];
+                      const uncheckedSubdomains: string[] = [];
+
+                      scanResult.subdomains.forEach(subdomain => {
                         const status = subdomainStatuses.get(subdomain);
                         const isChecking = checkingSubdomains.has(subdomain);
-                        return (
-                          <div
-                            key={subdomain}
-                            className="subdomain-item flex items-center justify-between p-3 slide-in"
-                            style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              {/* Status Indicator */}
-                              <span className="w-5 text-center flex-shrink-0">
-                                {isChecking ? (
-                                  <span className="text-[#00f0ff] text-base animate-pulse">&#x25CF;</span>
-                                ) : status ? (
-                                  status.working ? (
-                                    <span className="status-working text-base">&#x25C6;</span>
-                                  ) : (
-                                    <span className="status-failed text-base">&#x25C7;</span>
-                                  )
-                                ) : (
-                                  <span className="status-pending text-xs">&#x25CB;</span>
-                                )}
-                              </span>
 
-                              {/* Subdomain Name */}
-                              <a
-                                href={status?.working && status.protocol
-                                  ? `${status.protocol}//${subdomain}`
-                                  : `https://${subdomain}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
-                                title={subdomain}
-                              >
-                                {subdomain}
-                              </a>
+                        if (isChecking || !status) {
+                          uncheckedSubdomains.push(subdomain);
+                        } else if (status.working) {
+                          activeSubdomains.push(subdomain);
+                        } else {
+                          downSubdomains.push(subdomain);
+                        }
+                      });
+
+                      return (
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
+                          {/* Active Group */}
+                          {activeSubdomains.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1a1a2e]">
+                                <span className="text-[#39ff14] text-sm">&#x25C6;</span>
+                                <span className="font-mono text-xs tracking-wider text-[#39ff14] uppercase">
+                                  Active
+                                </span>
+                                <span className="text-[#555566] text-xs font-mono">
+                                  ({activeSubdomains.length})
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                {activeSubdomains.map((subdomain, index) => {
+                                  const status = subdomainStatuses.get(subdomain);
+                                  return (
+                                    <div
+                                      key={subdomain}
+                                      className="subdomain-item flex items-center justify-between p-3 slide-in"
+                                      style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <span className="w-5 text-center flex-shrink-0">
+                                          <span className="status-working text-base">&#x25C6;</span>
+                                        </span>
+                                        <a
+                                          href={status?.working && status.protocol
+                                            ? `${status.protocol}//${subdomain}`
+                                            : `https://${subdomain}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
+                                          title={subdomain}
+                                        >
+                                          {subdomain}
+                                        </a>
+                                      </div>
+                                      {status?.protocol && (
+                                        <span className="protocol-badge px-2 py-0.5 flex-shrink-0 ml-2">
+                                          {status.protocol.replace('://', '').toUpperCase()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
+                          )}
 
-                            {/* Protocol Badge */}
-                            {status?.working && status.protocol && (
-                              <span className="protocol-badge px-2 py-0.5 flex-shrink-0 ml-2">
-                                {status.protocol.replace('://', '').toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          {/* Down Group */}
+                          {downSubdomains.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1a1a2e]">
+                                <span className="text-[#ff3d00] text-sm">&#x25C7;</span>
+                                <span className="font-mono text-xs tracking-wider text-[#ff3d00] uppercase">
+                                  Down
+                                </span>
+                                <span className="text-[#555566] text-xs font-mono">
+                                  ({downSubdomains.length})
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                {downSubdomains.map((subdomain, index) => {
+                                  const status = subdomainStatuses.get(subdomain);
+                                  return (
+                                    <div
+                                      key={subdomain}
+                                      className="subdomain-item flex items-center justify-between p-3 slide-in"
+                                      style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <span className="w-5 text-center flex-shrink-0">
+                                          <span className="status-failed text-base">&#x25C7;</span>
+                                        </span>
+                                        <a
+                                          href={status?.working && status.protocol
+                                            ? `${status.protocol}//${subdomain}`
+                                            : `https://${subdomain}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
+                                          title={subdomain}
+                                        >
+                                          {subdomain}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Unchecked/Checking Group */}
+                          {uncheckedSubdomains.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1a1a2e]">
+                                <span className="text-[#555566] text-sm">&#x25CB;</span>
+                                <span className="font-mono text-xs tracking-wider text-[#555566] uppercase">
+                                  {checkingStatus ? 'Checking' : 'Unchecked'}
+                                </span>
+                                <span className="text-[#555566] text-xs font-mono">
+                                  ({uncheckedSubdomains.length})
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                {uncheckedSubdomains.map((subdomain, index) => {
+                                  const status = subdomainStatuses.get(subdomain);
+                                  const isChecking = checkingSubdomains.has(subdomain);
+                                  return (
+                                    <div
+                                      key={subdomain}
+                                      className="subdomain-item flex items-center justify-between p-3 slide-in"
+                                      style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <span className="w-5 text-center flex-shrink-0">
+                                          {isChecking ? (
+                                            <span className="text-[#00f0ff] text-base animate-pulse">&#x25CF;</span>
+                                          ) : (
+                                            <span className="status-pending text-xs">&#x25CB;</span>
+                                          )}
+                                        </span>
+                                        <a
+                                          href={status?.working && status.protocol
+                                            ? `${status.protocol}//${subdomain}`
+                                            : `https://${subdomain}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
+                                          title={subdomain}
+                                        >
+                                          {subdomain}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      // Original flat list for < 10 subdomains or no status checks
+                      return (
+                        <div className="space-y-1 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
+                          {scanResult.subdomains.map((subdomain, index) => {
+                            const status = subdomainStatuses.get(subdomain);
+                            const isChecking = checkingSubdomains.has(subdomain);
+                            return (
+                              <div
+                                key={subdomain}
+                                className="subdomain-item flex items-center justify-between p-3 slide-in"
+                                style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  {/* Status Indicator */}
+                                  <span className="w-5 text-center flex-shrink-0">
+                                    {isChecking ? (
+                                      <span className="text-[#00f0ff] text-base animate-pulse">&#x25CF;</span>
+                                    ) : status ? (
+                                      status.working ? (
+                                        <span className="status-working text-base">&#x25C6;</span>
+                                      ) : (
+                                        <span className="status-failed text-base">&#x25C7;</span>
+                                      )
+                                    ) : (
+                                      <span className="status-pending text-xs">&#x25CB;</span>
+                                    )}
+                                  </span>
+
+                                  {/* Subdomain Name */}
+                                  <a
+                                    href={status?.working && status.protocol
+                                      ? `${status.protocol}//${subdomain}`
+                                      : `https://${subdomain}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="subdomain-text font-mono text-sm text-[#8888a0] truncate hover:text-[#00f0ff] transition-colors"
+                                    title={subdomain}
+                                  >
+                                    {subdomain}
+                                  </a>
+                                </div>
+
+                                {/* Protocol Badge */}
+                                {status?.working && status.protocol && (
+                                  <span className="protocol-badge px-2 py-0.5 flex-shrink-0 ml-2">
+                                    {status.protocol.replace('://', '').toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
 
                 {/* Footer */}
