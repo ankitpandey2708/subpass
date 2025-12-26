@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SubdomainResult } from '@/app/lib/subdomain-scanner';
+import { SubdomainResult, HEADERS, createErrorResponse } from '@/app/lib/subdomain-scanner';
 import dns from 'dns/promises';
 import https from 'https';
 import http from 'http';
@@ -27,7 +27,7 @@ async function fetchWithoutSSLVerification(url: string, timeout: number): Promis
             path: urlObj.pathname + urlObj.search,
             method: 'GET',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': HEADERS['User-Agent'],
             },
             rejectUnauthorized: false, // Ignore SSL certificate errors
             timeout,
@@ -98,10 +98,7 @@ export async function PUT(request: NextRequest) {
         const { subdomains } = await request.json();
 
         if (!subdomains || !Array.isArray(subdomains)) {
-            return NextResponse.json(
-                { error: 'Subdomains array is required' },
-                { status: 400 }
-            );
+            return createErrorResponse('Subdomains array is required', 400);
         }
 
         // Check all subdomains in parallel
@@ -120,9 +117,6 @@ export async function PUT(request: NextRequest) {
 
     } catch (error) {
         console.error('Status check error:', error);
-        return NextResponse.json(
-            { error: 'Failed to check subdomain statuses' },
-            { status: 500 }
-        );
+        return createErrorResponse('Failed to check subdomain statuses');
     }
 }
