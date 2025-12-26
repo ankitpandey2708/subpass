@@ -14,6 +14,14 @@ const sources = {
     'Sublist3rAPI': 'Sublist3rAPI',
     'CertSpotter': 'CertSpotter',
     'BeVigil': 'BeVigil',
+    'Riddler': 'Riddler',
+    'LeakIX': 'LeakIX',
+    'DNSRepo': 'DNSRepo',
+    'FullHunt': 'FullHunt',
+    'Hunter': 'Hunter',
+    'Censys': 'Censys',
+    'BinaryEdge': 'BinaryEdge',
+    'ZoomEye': 'ZoomEye',
 };
 
 // Export the count of sources for the UI
@@ -211,6 +219,173 @@ async function fetchBevigil(domain: string): Promise<Set<string>> {
     });
 }
 
+// Fetch from Riddler.io - CSV export endpoint (no auth required)
+async function fetchRiddler(domain: string): Promise<Set<string>> {
+    const url = `https://riddler.io/search/exportcsv?q=pld:${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const text = await response.text();
+        const subdomains = new Set<string>();
+
+        for (const line of text.split('\n').slice(1)) { // Skip CSV header
+            const parts = line.split(',');
+            if (parts.length > 0) {
+                const host = parts[0].trim().toLowerCase();
+                if (host && host.endsWith(domain) && !host.startsWith('*')) {
+                    subdomains.add(host);
+                }
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from LeakIX - Free tier (limited results without API key)
+async function fetchLeakix(domain: string): Promise<Set<string>> {
+    const url = `https://leakix.net/api/subdomains/${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        if (Array.isArray(data)) {
+            for (const entry of data) {
+                const subdomain = entry.subdomain || entry;
+                if (typeof subdomain === 'string' && subdomain.endsWith(domain) && !subdomain.startsWith('*')) {
+                    subdomains.add(subdomain.toLowerCase());
+                }
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from DNSRepo
+async function fetchDnsrepo(domain: string): Promise<Set<string>> {
+    const url = `https://dnsrepo.noc.org/?domain=${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const text = await response.text();
+        const subdomains = new Set<string>();
+
+        // Parse JSON-LD or text output
+        const regex = new RegExp(`([a-zA-Z0-9\\.\\-]+\\.${domain.replace(/\./g, '\\.')})`, 'gi');
+        const matches = text.matchAll(regex);
+
+        for (const match of matches) {
+            const sub = match[1].toLowerCase();
+            if (!sub.startsWith('*')) {
+                subdomains.add(sub);
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from FullHunt.io
+async function fetchFullhunt(domain: string): Promise<Set<string>> {
+    const url = `https://fullhunt.io/api/v1/domain/${encodeURIComponent(domain)}/subdomains`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        const hosts = data.hosts || data.subdomains || [];
+        for (const host of hosts) {
+            const hostname = typeof host === 'string' ? host : host.domain || host.host;
+            if (hostname && hostname.endsWith(domain) && !hostname.startsWith('*')) {
+                subdomains.add(hostname.toLowerCase());
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from Hunter.io - Email search can reveal subdomains
+async function fetchHunter(domain: string): Promise<Set<string>> {
+    const url = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        if (data.data && data.data.emails) {
+            for (const email of data.data.emails) {
+                if (email.sources) {
+                    for (const source of email.sources) {
+                        if (source.domain && source.domain.endsWith(domain)) {
+                            subdomains.add(source.domain.toLowerCase());
+                        }
+                        if (source.uri) {
+                            try {
+                                const host = extractHostFromUrl(source.uri);
+                                if (host && host.endsWith(domain) && !host.startsWith('*')) {
+                                    subdomains.add(host);
+                                }
+                            } catch {
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from Censys
+async function fetchCensys(domain: string): Promise<Set<string>> {
+    const url = `https://search.censys.io/api/v2/certificates?q=${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        if (data.results) {
+            for (const cert of data.results) {
+                const names = cert.names || cert.parsed?.names || [];
+                for (const name of names) {
+                    if (name.endsWith(domain) && !name.startsWith('*')) {
+                        subdomains.add(name.toLowerCase());
+                    }
+                }
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from BinaryEdge
+async function fetchBinaryedge(domain: string): Promise<Set<string>> {
+    const url = `https://api.binaryedge.io/v2/query/domains/subdomain/${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        const events = data.events || [];
+        for (const subdomain of events) {
+            if (typeof subdomain === 'string' && subdomain.endsWith(domain) && !subdomain.startsWith('*')) {
+                subdomains.add(subdomain.toLowerCase());
+            }
+        }
+        return subdomains;
+    });
+}
+
+// Fetch from ZoomEye
+async function fetchZoomeye(domain: string): Promise<Set<string>> {
+    const url = `https://api.zoomeye.org/domain/search?q=${encodeURIComponent(domain)}`;
+    return fetchSource(url, 30000, async (response) => {
+        const data = await response.json();
+        const subdomains = new Set<string>();
+
+        if (data.list) {
+            for (const item of data.list) {
+                const name = item.name || item.domain;
+                if (name && name.endsWith(domain) && !name.startsWith('*')) {
+                    subdomains.add(name.toLowerCase());
+                }
+            }
+        }
+        return subdomains;
+    });
+}
+
 // Main POST handler
 export async function POST(request: NextRequest) {
     try {
@@ -237,6 +412,14 @@ export async function POST(request: NextRequest) {
             'Sublist3rAPI': fetchSublist3rApi,
             'CertSpotter': fetchCertspotter,
             'BeVigil': fetchBevigil,
+            'Riddler': fetchRiddler,
+            'LeakIX': fetchLeakix,
+            'DNSRepo': fetchDnsrepo,
+            'FullHunt': fetchFullhunt,
+            'Hunter': fetchHunter,
+            'Censys': fetchCensys,
+            'BinaryEdge': fetchBinaryedge,
+            'ZoomEye': fetchZoomeye,
         };
 
         // Fetch from all sources in parallel
