@@ -84,6 +84,7 @@ export default function Home() {
 
     setCheckingStatus(true);
     setCheckingSubdomains(new Set()); // Clear checking set at start
+    setSubdomainStatuses(new Map()); // Reset subdomain statuses to clear UI states
     const newStatuses = new Map<string, SubdomainResult>();
 
     try {
