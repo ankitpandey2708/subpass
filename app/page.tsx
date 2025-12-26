@@ -12,6 +12,7 @@ export default function Home() {
   const [error, setError] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [subdomainStatuses, setSubdomainStatuses] = useState<Map<string, SubdomainResult>>(new Map());
+  const [checkingSubdomains, setCheckingSubdomains] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function Home() {
     if (!scanResult || scanResult.subdomains.length === 0) return;
 
     setCheckingStatus(true);
+    setCheckingSubdomains(new Set()); // Clear checking set at start
     const newStatuses = new Map<string, SubdomainResult>();
 
     try {
@@ -78,6 +80,9 @@ export default function Home() {
       // Process subdomains in batches
       for (let i = 0; i < subdomains.length; i += batchSize) {
         const batch = subdomains.slice(i, i + batchSize);
+
+        // Mark current batch as being checked
+        setCheckingSubdomains(new Set(batch));
 
         const response = await fetch('/api/subdomains/status', {
           method: 'PUT',
@@ -93,11 +98,15 @@ export default function Home() {
           // Update UI after each batch completes
           setSubdomainStatuses(new Map(newStatuses));
         }
+
+        // Clear checking state for this batch
+        setCheckingSubdomains(new Set());
       }
     } catch (err) {
       console.error('Status check failed:', err);
     } finally {
       setCheckingStatus(false);
+      setCheckingSubdomains(new Set());
     }
   };
 
@@ -321,6 +330,7 @@ export default function Home() {
                     <div className="space-y-1 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                       {scanResult.subdomains.map((subdomain, index) => {
                         const status = subdomainStatuses.get(subdomain);
+                        const isChecking = checkingSubdomains.has(subdomain);
                         return (
                           <div
                             key={subdomain}
@@ -330,7 +340,9 @@ export default function Home() {
                             <div className="flex items-center gap-3 min-w-0">
                               {/* Status Indicator */}
                               <span className="w-5 text-center flex-shrink-0">
-                                {status ? (
+                                {isChecking ? (
+                                  <span className="text-[#00f0ff] text-base animate-pulse">&#x25CF;</span>
+                                ) : status ? (
                                   status.working ? (
                                     <span className="status-working text-base">&#x25C6;</span>
                                   ) : (
