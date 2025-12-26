@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HEADERS, processSubdomains, ScanProgress } from '@/app/lib/subdomain-scanner';
+import { HEADERS, processSubdomains, ScanProgress, normalizeDomain } from '@/app/lib/subdomain-scanner';
+
+// Define all sources matching subdomain.py
+const sources = {
+    'crt.sh': 'crt.sh',
+    'RapidDNS': 'RapidDNS',
+    'AlienVault': 'AlienVault',
+    'HackerTarget': 'HackerTarget',
+    'Anubis': 'Anubis',
+    'CommonCrawl': 'CommonCrawl',
+    'ThreatCrowd': 'ThreatCrowd',
+    'WaybackArchive': 'WaybackArchive',
+    'Sublist3rAPI': 'Sublist3rAPI',
+    'CertSpotter': 'CertSpotter',
+    'BeVigil': 'BeVigil',
+};
+
+// Export the count of sources for the UI
+export const SOURCES_COUNT = Object.keys(sources).length;
 
 // Fetch from crt.sh - Certificate Transparency logs
 async function fetchCrtsh(domain: string): Promise<Set<string>> {
@@ -308,12 +326,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Domain is required' }, { status: 400 });
         }
 
-        const cleanDomain = domain.toLowerCase().trim();
+        const cleanDomain = normalizeDomain(domain);
         const allSubdomains = new Set<string>();
         const progress: ScanProgress[] = [];
 
-        // Define all sources matching subdomain.py
-        const sources = {
+        // Map source names to fetch functions
+        const sourceFunctions = {
             'crt.sh': fetchCrtsh,
             'RapidDNS': fetchRapiddns,
             'AlienVault': fetchAlienvault,
@@ -329,7 +347,7 @@ export async function POST(request: NextRequest) {
 
         // Fetch from all sources in parallel
         const results = await Promise.allSettled(
-            Object.entries(sources).map(async ([name, func]) => {
+            Object.entries(sourceFunctions).map(async ([name, func]) => {
                 const subs = await func(cleanDomain);
                 return { name, subs };
             })
@@ -350,7 +368,7 @@ export async function POST(request: NextRequest) {
             } else {
                 // Find which source failed
                 const index = results.indexOf(result);
-                const name = Object.keys(sources)[index];
+                const name = Object.keys(sourceFunctions)[index];
                 progress.push({
                     source: name,
                     count: 0,

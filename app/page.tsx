@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ScanResult, ScanProgress, SubdomainResult } from '@/app/lib/subdomain-scanner';
+import { ScanResult, ScanProgress, SubdomainResult, normalizeDomain } from '@/app/lib/subdomain-scanner';
+import { SOURCES_COUNT } from '@/app/api/subdomains/scan/route';
 
 export default function Home() {
   const [domain, setDomain] = useState('');
@@ -30,10 +31,13 @@ export default function Home() {
     setSubdomainStatuses(new Map());
 
     try {
+      // Normalize domain to extract clean domain from URLs
+      const normalizedDomain = normalizeDomain(domain.trim());
+
       const response = await fetch('/api/subdomains/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.trim() }),
+        body: JSON.stringify({ domain: normalizedDomain }),
       });
 
       if (!response.ok) {
@@ -135,7 +139,7 @@ export default function Home() {
             <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-[#1a1a2e] bg-[#030308]">
               <span className="w-2 h-2 rounded-full bg-[#39ff14] shadow-[0_0_8px_rgba(57,255,20,0.5)]" />
               <span className="text-xs tracking-wider text-[#8888a0] uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                11 OSINT Sources Online
+                {SOURCES_COUNT} OSINT Sources Online
               </span>
             </div>
           </header>
@@ -173,7 +177,7 @@ export default function Home() {
                       disabled={scanning}
                       autoComplete="off"
                       spellCheck="false"
-                      autofocus
+                      autoFocus
                     />
                   </div>
 

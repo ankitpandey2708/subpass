@@ -26,6 +26,26 @@ export const HEADERS = {
     'Accept-Language': 'en-US,en;q=0.9',
 };
 
+// Normalize domain input to extract clean domain
+// Handles: https://www.npci.org.in/, www.npci.org.in/, npci.org.in/abc
+export function normalizeDomain(input: string): string {
+    let domain = input.trim().toLowerCase();
+
+    // Remove protocol (http://, https://)
+    domain = domain.replace(/^https?:\/\//, '');
+
+    // Remove www. prefix
+    domain = domain.replace(/^www\./, '');
+
+    // Remove path, query params, and fragment
+    domain = domain.split('/')[0].split('?')[0].split('#')[0];
+
+    // Remove port if present
+    domain = domain.split(':')[0];
+
+    return domain;
+}
+
 // Validate domain format
 export function isValidDomain(domain: string): boolean {
     const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
