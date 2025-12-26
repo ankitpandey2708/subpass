@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ScanResult, ScanProgress, SubdomainResult } from '@/app/lib/subdomain-scanner';
 
 export default function Home() {
@@ -11,10 +11,15 @@ export default function Home() {
   const [error, setError] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [subdomainStatuses, setSubdomainStatuses] = useState<Map<string, SubdomainResult>>(new Map());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleScan = async () => {
     if (!domain.trim()) {
-      setError('Please enter a domain');
+      setError('ERROR: No target specified');
       return;
     }
 
@@ -32,14 +37,14 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to scan domain');
+        throw new Error('Connection failed. Check target and retry.');
       }
 
       const data: ScanResult = await response.json();
       setScanResult(data);
       setProgress(data.progress);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'System error occurred');
     } finally {
       setScanning(false);
     }
@@ -72,121 +77,299 @@ export default function Home() {
         setSubdomainStatuses(newStatuses);
       }
     } catch (err) {
-      console.error('Failed to check statuses:', err);
+      console.error('Status check failed:', err);
     } finally {
       setCheckingStatus(false);
     }
   };
 
+  const workingCount = Array.from(subdomainStatuses.values()).filter(s => s.working).length;
+  const checkedCount = subdomainStatuses.size;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Subdomain Scanner
-          </h1>
-          <p className="text-gray-300 text-lg">
-            Discover subdomains using 11 powerful OSINT data sources
-          </p>
-        </div>
+    <div className="scanlines noise">
+      <div className="min-h-screen cyber-grid relative overflow-hidden">
+        {/* Ambient glow effects */}
+        <div className="fixed top-0 left-1/4 w-96 h-96 bg-[#00f0ff] opacity-5 blur-[150px] pointer-events-none" />
+        <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-[#ff00a8] opacity-5 blur-[150px] pointer-events-none" />
 
-        {/* Input Section */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/20 shadow-2xl">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter domain (e.g., example.com)"
-              className="flex-1 px-6 py-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400 text-lg transition-all"
-              disabled={scanning}
-            />
-            <button
-              onClick={handleScan}
-              disabled={scanning}
-              className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl font-semibold text-lg hover:from-purple-600 hover:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 shadow-lg"
+        {/* Scanning line effect when active */}
+        {scanning && <div className="scanning-line" />}
+
+        <div className="relative z-10 min-h-screen flex flex-col px-4 py-8 md:px-8 md:py-12">
+          {/* Header Section */}
+          <header className={`text-center mb-12 md:mb-16 ${mounted ? 'fade-in-up' : 'opacity-0'}`}>
+            {/* ASCII Art Logo */}
+            <div className="mb-6 font-mono text-[#00f0ff] text-xs md:text-sm opacity-60 select-none hidden md:block">
+              <pre className="inline-block text-left">
+{`╔═══════════════════════════════════════════════════════════╗
+║  ███████╗██╗   ██╗██████╗ ██████╗  █████╗ ███████╗███████╗ ║
+║  ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝ ║
+║  ███████╗██║   ██║██████╔╝██████╔╝███████║███████╗███████╗ ║
+║  ╚════██║██║   ██║██╔══██╗██╔═══╝ ██╔══██║╚════██║╚════██║ ║
+║  ███████║╚██████╔╝██████╔╝██║     ██║  ██║███████║███████║ ║
+║  ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝ ║
+╚═══════════════════════════════════════════════════════════╝`}
+              </pre>
+            </div>
+
+            {/* Mobile Logo */}
+            <h1
+              className="md:hidden text-4xl font-bold tracking-wider mb-4 glow-cyan"
+              style={{ fontFamily: "'Orbitron', sans-serif" }}
             >
-              {scanning ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Scanning...
-                </span>
-              ) : (
-                'Scan'
-              )}
-            </button>
-          </div>
+              <span className="text-[#00f0ff]">SUB</span>
+              <span className="text-[#ff00a8]">PASS</span>
+            </h1>
 
-          {error && (
-            <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
-              {error}
-            </div>
-          )}
-        </div>
-
-
-        {/* Results Section */}
-        {scanResult && (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <span className="text-green-400">✓</span>
-                Found {scanResult.total} Subdomains for {scanResult.domain}
-              </h2>
-              <button
-                onClick={checkAllStatuses}
-                disabled={checkingStatus}
-                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                {checkingStatus ? 'Checking...' : 'Check Status'}
-              </button>
+            {/* Subtitle */}
+            <div className="flex items-center justify-center gap-3 text-[#8888a0] text-sm md:text-base">
+              <span className="w-12 h-px bg-gradient-to-r from-transparent to-[#00f0ff]" />
+              <span className="tracking-[0.2em] uppercase" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                Subdomain Reconnaissance System
+              </span>
+              <span className="w-12 h-px bg-gradient-to-l from-transparent to-[#ff00a8]" />
             </div>
 
-            {scanResult.subdomains.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-xl">No subdomains found for this domain</p>
+            {/* Source count badge */}
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-[#1a1a2e] bg-[#030308]">
+              <span className="w-2 h-2 rounded-full bg-[#39ff14] shadow-[0_0_8px_rgba(57,255,20,0.5)]" />
+              <span className="text-xs tracking-wider text-[#8888a0] uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                11 OSINT Sources Online
+              </span>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 max-w-4xl w-full mx-auto">
+            {/* Input Terminal Card */}
+            <div
+              className={`cyber-card neon-box mb-8 ${mounted ? 'fade-in-up' : 'opacity-0'}`}
+              style={{ animationDelay: '0.1s' }}
+            >
+              {/* Card Header */}
+              <div className="cyber-header">
+                <span className={`cyber-header-dot ${!scanning && !error ? 'active' : ''}`} />
+                <span className="cyber-header-dot" />
+                <span className="cyber-header-dot" />
+                <span className="ml-2">target_acquisition.exe</span>
               </div>
-            ) : (
-              <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar">
-                {scanResult.subdomains.map((subdomain) => {
-                  const status = subdomainStatuses.get(subdomain);
-                  return (
-                    <div
-                      key={subdomain}
-                      className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-all group"
-                    >
-                      <div className="flex items-center gap-3">
-                        {status ? (
-                          status.working ? (
-                            <span className="text-green-400 text-xl" title="Working">✓</span>
-                          ) : (
-                            <span className="text-red-400 text-xl" title="Not Working">✗</span>
-                          )
-                        ) : (
-                          <span className="text-gray-500 text-xl">○</span>
-                        )}
-                        <span className="font-mono text-gray-200 group-hover:text-white transition-colors">
-                          {subdomain}
+
+              {/* Card Content */}
+              <div className="p-6 md:p-8">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Terminal Input */}
+                  <div className="flex-1 relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00f0ff] font-mono text-sm opacity-70">
+                      $&gt;
+                    </div>
+                    <input
+                      type="text"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="enter.target.domain"
+                      className="terminal-input w-full pl-12 pr-4 py-4 text-[#e8e8f0] font-mono text-base md:text-lg placeholder:text-[#555566]"
+                      disabled={scanning}
+                      autoComplete="off"
+                      spellCheck="false"
+                    />
+                  </div>
+
+                  {/* Scan Button */}
+                  <button
+                    onClick={handleScan}
+                    disabled={scanning}
+                    className="cyber-btn px-8 py-4 text-sm md:text-base"
+                    style={{ fontFamily: "'Orbitron', sans-serif" }}
+                  >
+                    {scanning ? (
+                      <span className="flex items-center justify-center gap-3">
+                        <span className="cyber-spinner" />
+                        <span>Scanning</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span className="mr-2">[</span>
+                        Execute
+                        <span className="ml-2">]</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="mt-4 p-4 border border-[#ff3d00] bg-[rgba(255,61,0,0.1)] font-mono text-sm">
+                    <span className="text-[#ff3d00]">{'>'} {error}</span>
+                  </div>
+                )}
+
+                {/* Scanning Progress Indicator */}
+                {scanning && (
+                  <div className="mt-6 font-mono text-sm text-[#8888a0]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[#00f0ff]">[</span>
+                      <span className="flex-1 h-1 bg-[#1a1a2e] overflow-hidden">
+                        <span className="block h-full w-1/3 bg-gradient-to-r from-[#00f0ff] to-[#ff00a8] animate-pulse"
+                              style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+                      </span>
+                      <span className="text-[#ff00a8]">]</span>
+                    </div>
+                    <p className="text-center text-xs tracking-wider animate-pulse">
+                      QUERYING OSINT SOURCES...
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Results Section */}
+            {scanResult && (
+              <div
+                className="cyber-card neon-box fade-in-up"
+                style={{ animationDelay: '0.2s' }}
+              >
+                {/* Results Header */}
+                <div className="cyber-header justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="cyber-header-dot active" />
+                    <span>scan_results.log</span>
+                  </div>
+                  <span className="text-[#00f0ff]">{scanResult.domain}</span>
+                </div>
+
+                {/* Stats Bar */}
+                <div className="p-4 border-b border-[#1a1a2e] bg-[#030308]">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    {/* Stats */}
+                    <div className="flex items-center gap-6 font-mono text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#555566]">FOUND:</span>
+                        <span className="text-[#00f0ff] glow-cyan text-lg font-bold" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                          {scanResult.total}
                         </span>
                       </div>
-                      {status?.working && status.protocol && (
-                        <span className="text-xs px-3 py-1 bg-purple-500/30 border border-purple-500/50 rounded-full text-purple-200">
-                          {status.protocol.replace('://', '').toUpperCase()}
-                        </span>
+                      {checkedCount > 0 && (
+                        <>
+                          <span className="text-[#1a1a2e]">|</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#555566]">ACTIVE:</span>
+                            <span className="text-[#39ff14] glow-acid text-lg font-bold" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                              {workingCount}
+                            </span>
+                          </div>
+                          <span className="text-[#1a1a2e]">|</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#555566]">DOWN:</span>
+                            <span className="text-[#ff3d00] text-lg font-bold" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                              {checkedCount - workingCount}
+                            </span>
+                          </div>
+                        </>
                       )}
                     </div>
-                  );
-                })}
+
+                    {/* Status Check Button */}
+                    <button
+                      onClick={checkAllStatuses}
+                      disabled={checkingStatus}
+                      className="cyber-btn cyber-btn-secondary px-6 py-2 text-xs"
+                      style={{ fontFamily: "'Orbitron', sans-serif" }}
+                    >
+                      {checkingStatus ? (
+                        <span className="flex items-center gap-2">
+                          <span className="cyber-spinner" />
+                          Probing
+                        </span>
+                      ) : (
+                        'Verify Status'
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Subdomain List */}
+                <div className="p-4">
+                  {scanResult.subdomains.length === 0 ? (
+                    <div className="text-center py-16 font-mono">
+                      <div className="text-[#555566] text-lg mb-2">NO TARGETS FOUND</div>
+                      <div className="text-[#8888a0] text-sm">
+                        Domain returned empty results from all sources
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
+                      {scanResult.subdomains.map((subdomain, index) => {
+                        const status = subdomainStatuses.get(subdomain);
+                        return (
+                          <div
+                            key={subdomain}
+                            className="subdomain-item flex items-center justify-between p-3 slide-in"
+                            style={{ animationDelay: `${Math.min(index * 0.02, 0.5)}s` }}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              {/* Status Indicator */}
+                              <span className="w-5 text-center flex-shrink-0">
+                                {status ? (
+                                  status.working ? (
+                                    <span className="status-working text-base">&#x25C6;</span>
+                                  ) : (
+                                    <span className="status-failed text-base">&#x25C7;</span>
+                                  )
+                                ) : (
+                                  <span className="status-pending text-xs">&#x25CB;</span>
+                                )}
+                              </span>
+
+                              {/* Subdomain Name */}
+                              <span
+                                className="subdomain-text font-mono text-sm text-[#8888a0] truncate"
+                                title={subdomain}
+                              >
+                                {subdomain}
+                              </span>
+                            </div>
+
+                            {/* Protocol Badge */}
+                            {status?.working && status.protocol && (
+                              <span className="protocol-badge px-2 py-0.5 flex-shrink-0 ml-2">
+                                {status.protocol.replace('://', '').toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-4 py-3 border-t border-[#1a1a2e] bg-[#030308] font-mono text-xs text-[#555566]">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      Scan completed at {new Date().toLocaleTimeString('en-US', { hour12: false })}
+                    </span>
+                    <span className="text-[#00f0ff]">
+                      {progress.filter(p => p.success).length}/{progress.length} sources
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
+          </main>
 
-          </div>
-        )}
+          {/* Footer */}
+          <footer className={`mt-12 text-center ${mounted ? 'fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.3s' }}>
+            <div className="font-mono text-xs text-[#555566] tracking-wider">
+              <span className="text-[#00f0ff]">&lt;</span>
+              SUBPASS
+              <span className="text-[#ff00a8]">/&gt;</span>
+              <span className="mx-2 opacity-50">|</span>
+              <span className="opacity-50">Reconnaissance Framework v1.0</span>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
   );
